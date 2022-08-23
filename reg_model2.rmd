@@ -1,6 +1,6 @@
 ---
 title: "cap210"
-author: "Christina Ding"
+author: "Yijun Shen"
 date: "2/14/2022"
 output:
   html_document: default
