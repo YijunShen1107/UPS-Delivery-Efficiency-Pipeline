@@ -1,0 +1,112 @@
+---
+title: "del_pkgs"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(dplyr)
+library(reticulate)
+library(knitr)
+library(varhandle)
+```
+
+```{r}
+data_merge <- d1
+```
+
+```{r}
+summary(data_merge$del_pkgs)
+boxplot(del_pkgs~date.x,data=data_merge, main="distribution of amount of package delivery",
+   xlab="DATE", ylab="package delivered")
+```
+# transform the data type of date to as.Date
+```{r}
+data_merge$date.x <- as.Date(data_merge$date.x)
+```
+# overall commercial and residential proportion
+```{r}
+data_merge$rescom_stop.x <- as.factor(data_merge$rescom_stop.x)
+levels(data_merge$rescom_stop.x) <- c("Residential","Commercial")
+prop.table(table(data_merge$rescom_stop.x))
+```
+
+#filter the data
+```{r}
+pkg_filter <- data_merge %>% 
+  select (date.x,del_pkgs, rescom_stop.x, stop_time) %>%
+  filter(del_pkgs<=10 	)
+print(nrow(data_merge))
+print(nrow(pkg_filter))
+```
+
+# average package in commercial and residential
+```{r}
+pkg_filter %>%
+  group_by(rescom_stop.x) %>%
+  summarize(mean_package=mean(del_pkgs)) %>%
+  pivot_longer(cols = last_col()) %>%
+  pivot_wider(everything())  %>%
+  mutate_if(is.numeric, ~round(., 3)) %>%
+  kable()
+```
+# ggplot overall package deliver quantity and wait time 
+```{r}
+ggplot(pkg_filter , aes(x=del_pkgs, y = stop_time))+
+  geom_point(color="red", alpha=.5 , position=position_jitter(w=0.2))+
+  geom_smooth(method='lm')+ 
+   ggtitle('package quantity vs stop time') +
+ xlab('Q Package') +
+  ylab('Stop Time')
+```
+# ggplot overall package deliver quantity and wait time classified by residential and commercial
+
+
+```{r}
+ggplot(pkg_filter , aes(x=del_pkgs, y = stop_time))+
+  geom_point(color="red", alpha=.5)+
+  geom_smooth(method='lm')+ 
+  facet_grid(~rescom_stop.x, scales="free")+
+   ggtitle('package quantity vs stop time by customer address type') +
+ xlab('Q Package') +
+  ylab('Stop Time')
+
+``` 
+#
+```{r}
+pkg_filter$package_count <- as.factor(pkg_filter$del_pkgs)
+prop.table(table(pkg_filter$package_count))
+```
+
+
+```{r}
+pkg_filter %>%
+  select(package_count,stop_time)%>%
+  group_by(package_count) %>%
+  summarize(avg_stop=mean(stop_time),median_stop=median(stop_time)) %>%
+  pivot_longer(cols = last_col()) %>%
+  pivot_wider(everything())  %>%
+  mutate_if(is.numeric, ~round(., 3)) %>%
+  kable()
+```
+
+# overall regression
+```{r}
+reg<- lm(formula = stop_time ~ del_pkgs, data = pkg_filter)
+coef(reg)
+```
+# Residential regression
+```{r}
+reg<- lm(formula = stop_time ~ del_pkgs, data = pkg_filter[pkg_filter$rescom_stop.x=='Residential',])
+coef(reg)
+```
+# Commercial regression
+```{r}
+reg<- lm(formula = stop_time ~ del_pkgs, data = pkg_filter[pkg_filter$rescom_stop.x=='Commercial',])
+coef(reg)
+```
+```{r}
+print(cor(pkg_filter$del_pkgs, pkg_filter$stop_time, method = "pearson"))
+```
+The quantity of the package delivery is positively correlated with the stop time; the commercial shows a strong covariance value than the residential one
