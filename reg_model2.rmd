@@ -1,0 +1,176 @@
+---
+title: "cap210"
+author: "Christina Ding"
+date: "2/14/2022"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(Rcpp)
+library(dplyr)
+library(plotly)
+library(lubridate)
+library(multcomp)
+```
+
+```{r}
+merged<-read.csv("cleanedUPSDataFINAL.csv")
+```
+
+
+```{r}
+merged$Q1<-NULL
+merged[merged$del_pkgs==1,"Q1"]<-1
+merged[merged$del_pkgs!=1,"Q1"]<-0
+```
+
+```{r}
+merged$Q2<-NULL
+merged[merged$del_pkgs==2,"Q2"]<-1
+merged[merged$del_pkgs!=2,"Q2"]<-0
+```
+
+```{r}
+merged$Q3<-NULL
+merged[merged$del_pkgs==3,"Q3"]<-1
+merged[merged$del_pkgs!=3,"Q3"]<-0
+```
+
+```{r}
+merged$Q4<-NULL
+merged[merged$del_pkgs==4,"Q4"]<-1
+merged[merged$del_pkgs!=4,"Q4"]<-0
+```
+
+```{r}
+merged$Q5<-NULL
+merged[merged$del_pkgs==5,"Q5"]<-1
+merged[merged$del_pkgs!=5,"Q5"]<-0
+```
+
+```{r}
+merged$Q6<-NULL
+merged[merged$del_pkgs==6,"Q6"]<-1
+merged[merged$del_pkgs!=6,"Q6"]<-0
+```
+
+```{r}
+merged$Q7<-NULL
+merged[merged$del_pkgs==7,"Q7"]<-1
+merged[merged$del_pkgs!=7,"Q7"]<-0
+```
+
+```{r}
+merged$Q8<-NULL
+merged[merged$del_pkgs==8,"Q8"]<-1
+merged[merged$del_pkgs!=8,"Q8"]<-0
+```
+
+```{r}
+merged$Q9<-NULL
+merged[merged$del_pkgs==9,"Q9"]<-1
+merged[merged$del_pkgs!=9,"Q9"]<-0
+```
+
+```{r}
+merged$Q10<-NULL
+merged[merged$del_pkgs==10,"Q10"]<-1
+merged[merged$del_pkgs!=10,"Q10"]<-0
+```
+
+```{r}
+merged$Q11<-NULL
+merged[merged$del_pkgs>10,"Q11"]<-1
+merged[merged$del_pkgs<11,"Q11"]<-0
+```
+
+
+```{r}
+lessThan10 <- merged %>%
+  filter(Q11 == 0)
+
+#summary stats: drivers, total obsvs
+summaryStats <- lessThan10 %>%
+  summarize(observations = n(), drivers = n_distinct(emp_id.x))
+summaryStats
+```
+
+### Simple
+```{r}
+w<-lm(stop_time~del_pkgs, data=lessThan10)
+summary(w)
+
+```
+
+### Simple Robust
+```{r}
+library(MASS)
+w2 <- rlm(stop_time~del_pkgs, data=lessThan10)
+summary(w2)
+```
+
+
+### Flexible Model
+```{r}
+
+## Neel Makes Graph
+x<-lm(stop_time~Q2+Q3+Q4+Q5+Q6+Q7+Q8+Q9+Q10, data=lessThan10)
+summary(x)
+```
+
+
+### Flexible Model Robust
+```{r}
+## Xiuyi Makes Graph
+x<-rlm(stop_time~Q2+Q3+Q4+Q5+Q6+Q7+Q8+Q9+Q10, data=lessThan10)
+summary(x)
+```
+
+### plm simple model
+```{r}
+plm1 <- plm(stop_time ~ del_pkgs, index = c(unique, stop_num), model = "within", data = lessThan10)
+```
+
+# Simple demeaning regression
+```{r}
+#run on just delpkgs
+#and demeaning method
+#yi - ybar for each variable(xi) for driver. stop_time' = avg(stoptime) for each driver/q. don't include intercept
+#pictures of slopes
+library(dplyr)
+
+demeaning <- lessThan10 %>%
+  dplyr:: select(emp_id.x, stop_time, del_pkgs) %>%
+  group_by(emp_id.x) %>%
+  summarize(demeanTime = stop_time - mean(stop_time), demeanPkgs = del_pkgs - mean(del_pkgs))
+demeaning
+  
+demeanReg <- lm(demeanTime ~ demeanPkgs, data = demeaning)
+summary(demeanReg)
+```
+
+
+### plm flexible model
+```{r}
+## Yijun Makes Graph
+library(plm)
+plmModel <- plm(stop_time ~ Q2+Q3+Q4+Q5+Q6+Q7+Q8+Q9+Q10, index = c(unique, stop_num), model = "within", data = lessThan10)
+```
+
+# Flexible demeaning regression
+```{r}
+## Christina Makes Graph
+library(dplyr)
+
+demeaning2 <- lessThan10 %>%
+  dplyr:: select(emp_id.x, stop_time, del_pkgs, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q8, Q9, Q10) %>%
+  group_by(emp_id.x, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q8, Q9, Q10) %>%
+  summarize(demeanTime = stop_time - mean(stop_time), demeanPkgs = del_pkgs - mean(del_pkgs))
+demeaning2
+  
+demeanReg2 <- lm(demeanTime ~ Q2+Q3+Q4+Q5+Q6+Q7+Q8+Q9+Q10, data = demeaning2)
+summary(demeanReg2)
+```
