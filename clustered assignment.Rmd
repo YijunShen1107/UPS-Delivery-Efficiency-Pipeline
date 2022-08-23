@@ -61,7 +61,7 @@ ggplot(data = d1, aes(x=stop_time, y=over_70.x)) +
                  axis.title = element_text(face = "bold", size = 14))
 ```
 
-## Xiuyi
+
 
 ```{r}
 data_merge <- d1
@@ -162,7 +162,7 @@ print(cor(pkg_filter$del_pkgs, pkg_filter$stop_time, method = "pearson"))
 ```
 The quantity of the package delivery is positively correlated with the stop time; the commercial shows a strong covariance value than the residential one
 
-## Christina
+
 
 ```{r}
 #merged%>%
@@ -215,7 +215,7 @@ summary(w)
 cor(d1$loc_desc, d1$stop_time_larger_unit)
 ```
 
-##Neel
+
 ```{r}
 summary(d1$bonus.x)
 noBonus <- sum(d1$bonus.x == 0)
@@ -267,7 +267,7 @@ cbind(numPointsCount, numPointsFrac)
 Unfortunately, most of the data is singular data points (60%), about 24% have two data points, and 16% have 3 data points. This isn't really panel data in this case because we don't observe the same employees over time for the most part.
 
 
-##Marawan
+
 ## Setup
 
 ```{r}
