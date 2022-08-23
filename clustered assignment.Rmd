@@ -1,0 +1,366 @@
+---
+title: "Clustered assginment"
+author: "Yijun Shen"
+date: "2/10/2022"
+output: html_document
+---
+
+##Yijun Shen:
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(wooldridge)
+library(multcomp)
+library(reticulate)
+library(knitr)
+library(varhandle)
+library(tidyverse)
+library(plotly)
+library(gapminder)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(readxl)
+library(cowplot)
+library(ggthemes)
+library(lubridate)
+library(ggplot2)
+library(dplyr)
+library(readr)
+d1<-read.csv(file = "UPS_Merged_data_3.csv")
+```
+
+
+
+```{r }
+d1 %>%
+  mutate(stop_time)
+summary(d1$over_70.x)
+boxplot(d1$stop_time ~ d1$over_70.x, main="Between Package over 70 lb",
+   xlab="Package Over 70 lb", ylab="Stop time")
+tapply(X = d1$stop_time, INDEX = d1$over_70.x, FUN = mean)
+tapply(X = d1$stop_time, INDEX = d1$over_70.x, FUN = sd)
+smk.par.tab <- table(d1$stop_time,d1$over_70.x)
+addmargins(smk.par.tab)
+```
+
+other graph
+
+```{r}
+ggplot(data = d1, aes(x=stop_time, y=over_70.x)) +
+  geom_line(stat = "identity", color = "black") +
+  geom_point(stat = "identity", color = "blue") +
+  geom_area(fill = "red", alpha = 0.5) +
+  labs(title = "Between Package over 70 lb",
+   x="Package Over 70 lb", y="Stop time") +
+                theme_minimal_hgrid() +
+                theme(axis.text = element_text(face = "bold"),
+                 plot.title = element_text(size = 18, face = "bold"),
+                 axis.title = element_text(face = "bold", size = 14))
+```
+
+## Xiuyi
+
+```{r}
+data_merge <- d1
+```
+
+```{r}
+summary(data_merge$del_pkgs)
+boxplot(del_pkgs~date.x,data=data_merge, main="distribution of amount of package delivery",
+   xlab="DATE", ylab="package delivered")
+```
+# transform the data type of date to as.Date
+```{r}
+data_merge$date.x <- as.Date(data_merge$date.x)
+```
+# overall commercial and residential proportion
+```{r}
+data_merge$rescom_stop.x <- as.factor(data_merge$rescom_stop.x)
+levels(data_merge$rescom_stop.x) <- c("Residential","Commercial")
+prop.table(table(data_merge$rescom_stop.x))
+```
+
+#filter the data
+```{r}
+pkg_filter <- data_merge %>% 
+  select (date.x,del_pkgs, rescom_stop.x, stop_time) %>%
+  filter(del_pkgs<=10 	)
+print(nrow(data_merge))
+print(nrow(pkg_filter))
+```
+
+# average package in commercial and residential
+```{r}
+pkg_filter %>%
+  group_by(rescom_stop.x) %>%
+  summarize(mean_package=mean(del_pkgs)) %>%
+  pivot_longer(cols = last_col()) %>%
+  pivot_wider(everything())  %>%
+  mutate_if(is.numeric, ~round(., 3)) %>%
+  kable()
+```
+# ggplot overall package deliver quantity and wait time 
+```{r}
+ggplot(pkg_filter , aes(x=del_pkgs, y = stop_time))+
+  geom_point(color="red", alpha=.5 , position=position_jitter(w=0.2))+
+  geom_smooth(method='lm')+ 
+   ggtitle('package quantity vs stop time') +
+ xlab('Q Package') +
+  ylab('Stop Time')
+```
+# ggplot overall package deliver quantity and wait time classified by residential and commercial
+
+
+```{r}
+ggplot(pkg_filter , aes(x=del_pkgs, y = stop_time))+
+  geom_point(color="red", alpha=.5)+
+  geom_smooth(method='lm')+ 
+  facet_grid(~rescom_stop.x, scales="free")+
+   ggtitle('package quantity vs stop time by customer address type') +
+ xlab('Q Package') +
+  ylab('Stop Time')
+
+``` 
+#
+```{r}
+pkg_filter$package_count <- as.factor(pkg_filter$del_pkgs)
+prop.table(table(pkg_filter$package_count))
+```
+
+
+```{r}
+pkg_filter %>%
+  select(package_count,stop_time)%>%
+  group_by(package_count) %>%
+  summarize(avg_stop=mean(stop_time),median_stop=median(stop_time)) %>%
+  pivot_longer(cols = last_col()) %>%
+  pivot_wider(everything())  %>%
+  mutate_if(is.numeric, ~round(., 3)) %>%
+  kable()
+```
+
+# overall regression
+```{r}
+reg<- lm(formula = stop_time ~ del_pkgs, data = pkg_filter)
+coef(reg)
+```
+# Residential regression
+```{r}
+reg<- lm(formula = stop_time ~ del_pkgs, data = pkg_filter[pkg_filter$rescom_stop.x=='Residential',])
+coef(reg)
+```
+# Commercial regression
+```{r}
+reg<- lm(formula = stop_time ~ del_pkgs, data = pkg_filter[pkg_filter$rescom_stop.x=='Commercial',])
+coef(reg)
+```
+```{r}
+print(cor(pkg_filter$del_pkgs, pkg_filter$stop_time, method = "pearson"))
+```
+The quantity of the package delivery is positively correlated with the stop time; the commercial shows a strong covariance value than the residential one
+
+## Christina
+
+```{r}
+#merged%>%
+  unique(d1$location_des.x)
+```
+
+```{r}
+d1$loc_desc<-NULL
+d1[d1$location_des.x != c("MET CUSTOMER", "OFFICE","RECEIVER","JANITOR","GUARD","CONCIERGE","DOOR PERSON","HOSTESS"),"loc_desc"]<-0
+d1[d1$location_des.x==c("MET CUSTOMER", "OFFICE","RECEIVER","JANITOR","GUARD","CONCIERGE","DOOR PERSON","HOSTESS"), "loc_desc"]<-1
+```
+
+```{r}
+d1$stop_time_larger_unit<-d1$stop_time*3600
+```
+
+```{r}
+sum(d1$loc_desc==1)
+sum(d1$loc_desc==0)
+```
+
+```{r}
+NotMeetFrac<-sum(d1$loc_desc==0)/(sum(d1$loc_desc==0)+sum(d1$loc_desc==1))
+MeetFrac<-sum(d1$loc_desc==1)/(sum(d1$loc_desc==0)+sum(d1$loc_desc==1))
+NotMeetFrac
+MeetFrac
+```
+
+```{r}
+summary(d1$loc_desc)
+```
+
+```{r}
+number<-c(sum(d1$loc_desc==0), sum(d1$loc_desc==1))
+whether_meet<-c("NotMeet", "Meet")
+df<-data.frame(whether_meet,number)
+df
+
+plot_ly(df, x=~whether_meet,y=~number,type="bar")
+```
+
+
+```{r}
+w<-lm(stop_time_larger_unit~loc_desc, data=d1)
+summary(w)
+# s=46.4364+28.4373l
+```
+
+```{r}
+cor(d1$loc_desc, d1$stop_time_larger_unit)
+```
+
+##Neel
+```{r}
+summary(d1$bonus.x)
+noBonus <- sum(d1$bonus.x == 0)
+bonus <- sum(d1$bonus.x == 1)
+noBonusFrac <- noBonus/(noBonus + bonus)
+bonusFrac <- bonus/(noBonus + bonus)
+
+dataTwo <- d1 %>%
+  group_by(date.x) %>%
+  summarize(bonus <- sum(bonus.x == 1), noBonus <- sum(bonus.x == 0)) %>%
+  rename(bonus = `bonus <- sum(bonus.x == 1)`, noBonus = `noBonus <- sum(bonus.x == 0)`) %>%
+  summarize(date.x, bonus, noBonus, bonusFrac <- bonus/(noBonus + bonus), noBonusFrac <- noBonus/(noBonus + bonus))
+
+dataTwo
+
+
+cor(d1$bonus.x, d1$stop_time)
+cor(d1$bonus.x, d1$stop_time_2)
+```
+There is no need to include bonus in the model because clearly, there is no consistent correlation with stop_time or stop_time_2.
+
+## Workers that have 3 data points
+
+```{r}
+dataPoints <- d1 %>%
+  group_by(unique) %>%
+  summarize(total = n())
+
+threePoints <- sum(dataPoints == 3)
+
+twoPoints <- sum(dataPoints == 2)
+
+onePoint <- sum(dataPoints == 1)
+
+
+numPointsCount <- rbind(onePoint, twoPoints, threePoints)
+
+total <- sum(threePoints + twoPoints + onePoint)
+
+fracThree <- threePoints/total 
+fracTwo <- twoPoints/total
+fracOne <- onePoint/total
+
+numPointsFrac <- rbind(fracOne, fracTwo, fracThree)
+
+cbind(numPointsCount, numPointsFrac)
+```
+
+Unfortunately, most of the data is singular data points (60%), about 24% have two data points, and 16% have 3 data points. This isn't really panel data in this case because we don't observe the same employees over time for the most part.
+
+
+##Marawan
+## Setup
+
+```{r}
+data <- d1 %>%
+  mutate(stop_time)
+```
+
+## removing stops = 0
+
+
+```{r }
+data %>% 
+  filter(stop_start >= stop_complete)%>%
+  nrow()
+
+data %>%
+  filter(stop_time_2 <= 0)%>%
+  nrow()
+
+data <- data %>%
+  filter(stop_start < stop_complete, stop_time_2 > 0)
+```
+
+```{r }
+
+#does time matter? 
+data_timeOfDay <- data %>%
+  select(stop_time_2, morning, afternoon, evening) %>%
+  filter(na.rm = TRUE)
+  
+cor(data_subset, use="pairwise.complete.obs")
+
+
+
+#cor(data_dateImpact, use = "pairwise.complete.obs")
+
+data_subset_pckgQuant <- data %>%
+  select(comvol.x,
+resvol.x,
+sig_req.x,
+signature.x,
+stop_time_2
+)%>%
+  filter(na.rm = TRUE)
+
+cor(data_subset_pckgQuant, use="pairwise.complete.obs")
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+
+```{r}
+
+#total unique drivers
+data %>%
+  filter(tolower(emp_job_desc.x) == "package driver")%>%
+  distinct(emp_id.x)%>%
+  nrow()
+
+data %>%
+  filter(tolower(emp_job_desc.x) == "full-time combination driver")%>%
+  distinct(emp_id.x)%>%
+  nrow()
+
+#total unique districts
+data %>%
+  #distinct(dd.x)%>%
+  group_by(dd.x)%>%
+  summarise(total = n())
+
+#unique dates
+data %>%
+  #distinct(date.x)%>%
+  group_by(date.x)%>%
+  summarise(total = n())
+
+
+
+```
+
+
+
+
+
+```{r}
+
+data_dateImpact <- data %>%
+  select(stop_time_2, date.x, emp_start_dt.x)%>%
+  mutate(tenure = difftime(as.Date("date.x", format = "%y-%m-%d"), as.Date("emp_start_dt.x",format = "%y-%m-%d"),))
+
+data_dateImpact
+
+
+
+```
